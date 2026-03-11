@@ -3,6 +3,12 @@
 このファイルは `.github/agents/*.md` で定義された各エージェントに共通する実行ルールです。
 個別エージェントの責務定義に加えて、本ルールを常に優先して適用してください。
 
+## 0. Role Separation Contract
+- `agents`: エージェントの役割・責務・担当領域のみを定義する（実装手順や詳細規約は持たない）
+- `instructions`: 全エージェント共通で必ず従う規約・品質基準・出力方針を定義する
+- `skills`: 実装時に参照する手順・チェックリスト・具体的ノウハウを定義する
+- 矛盾時の優先順位は `instructions > agent > skill` とする
+
 ## 1. Scope
 - 対象: Cosense ベース RAG システム（Batch Ingestion / Embedding / Retrieval / LLM / Frontend / Platform）
 - 目的: 根拠付き回答の品質・運用安全性・保守性を継続的に高める
@@ -47,3 +53,8 @@
 - 根拠のない回答品質改善（モデル任せの調整のみ）
 - 監視やログなしの本番前提変更
 - 検索・生成の責務境界を曖昧にする設計
+
+## 9. Usage Pattern
+1. `agents` で担当ロールを選ぶ
+2. 本 `instructions` で必須ルールを確認する
+3. 対応する `skills` で具体手順を実行する

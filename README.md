@@ -2,18 +2,21 @@
 
 Cosense をデータソースとする RAG システムの設計・実装用リポジトリです。
 
-## Agent 設定
+## Copilot 設定
 
-GitHub Copilot の agent 設定を以下に配置しています。
+GitHub Copilot の設定を以下に分離して配置しています。
 
-- Agent 定義: [.github/agents](.github/agents)
-- 共通ルール: [.github/instructions/agents.instructions.md](.github/instructions/agents.instructions.md)
+- Agent 定義（役割/責務）: [.github/agents](.github/agents)
+- Instructions（共通指示/品質基準）: [.github/instructions/agents.instructions.md](.github/instructions/agents.instructions.md)
+- Skills（実装ノウハウ/手順）: [.github/skills](.github/skills)
+- プロジェクト共通方針: [.github/copilot-instructions.md](.github/copilot-instructions.md)
 
 ### 使い方
 
 1. 目的に合う agent を `.github/agents` から選択する
-2. 各 agent の `Boundaries` と `Common Instructions` を確認する
-3. 実装・ドキュメント変更時は共通ルールに従って、影響範囲と検証方法を明示する
+2. `.github/instructions/agents.instructions.md` で共通ルールを確認する
+3. 対応する skill を `.github/skills` から選び、実装手順を適用する
+4. 実装・ドキュメント変更時は影響範囲と検証方法を明示する
 
 ### 利用可能な agent
 
@@ -24,3 +27,12 @@ GitHub Copilot の agent 設定を以下に配置しています。
 - `frontend-ui-engineer`
 - `platform-observability-engineer`
 - `document-engineer`
+
+### 利用可能な skills
+
+- `rag-ingestion-indexing`
+- `rag-embedding-service`
+- `rag-retrieval-generation`
+- `rag-frontend-experience`
+- `rag-platform-observability`
+- `rag-docs-governance`
