@@ -2,6 +2,11 @@
 
 Cosense をデータソースとする RAG システムの設計・実装用リポジトリです。
 
+## 主要ドキュメント
+
+- システム仕様書: [docs/system-specification.md](docs/system-specification.md)
+- アーキテクチャ: [architecture.md](architecture.md)
+
 ## Copilot 設定
 
 GitHub Copilot の設定を以下に分離して配置しています。
