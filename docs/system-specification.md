@@ -67,7 +67,7 @@ flowchart LR
         D -->|クエリ sparse vector| G
         G -->|Top-K 検索| E
         E -->|関連ドキュメント| G
-        G -->|コンテキスト付きプロンプト| H
+        G -->|LLM API 呼び出し| H
         H -->|生成回答| G
         G -->|回答 + citation| F
     end
@@ -87,6 +87,7 @@ flowchart LR
 #### 処理要件
 
 - 手動トリガーで実行されること
+- チャンク既定値は `chunk_size=800` 文字、`chunk_overlap=100` 文字とすること
 - 冪等性を確保すること（再実行で不整合を起こさない）
 - 更新日時ベースの差分取り込みを考慮すること
 - 失敗時は再試行と失敗ログ記録を行うこと
@@ -110,26 +111,28 @@ flowchart LR
 - フロントエンドからクエリを受け取る
 - クエリを sparse vector 化し、Elasticsearch で Top-K 検索する
 - 検索結果から LLM 向けコンテキストを構築する
+- LLM Generation API を呼び出し回答を取得する
 - 回答と citation を返却する
 
 #### 処理要件
 
-- スコア閾値で低関連結果を抑制すること
-- Top-K 設定を入力または既定値で制御できること
-- 低関連時に「情報不足」フォールバックを返すこと
+- 既定値は `top_k=5`、`score_threshold=0.20` とすること（入力で上書き可能）
+- `score_threshold` 以上の文書が 1 件もない場合、フォールバック文言「該当情報が見つからないため、回答できませんでした。」を返すこと
+- citation は検索順位順で返し、`url + title` キーで重複排除すること
+- LLM 呼び出し既定値を `timeout=30s`、`retry=2`、`max_tokens=512` とすること
 
 ### 5.4 LLM Generation
 
 #### 責務
 
-- 検索コンテキストを優先して回答を生成する
+- Retrieval Service から受け取った検索コンテキストを優先して回答を生成する API を提供する
 
 #### 処理要件
 
 - 利用モデルは Ollama Gemma3 とする
 - プロンプトでコンテキスト優先を明示する
-- citation 追跡可能な回答形式を維持する
-- タイムアウト・トークン上限・再試行を設定する
+- citation の整形・重複排除・返却順制御は Retrieval Service 側で行う
+- タイムアウト・トークン上限・再試行は Retrieval Service 側の呼び出しポリシーで制御する
 
 ### 5.5 Frontend
 
@@ -161,7 +164,7 @@ flowchart LR
 2. Retrieval Service がクエリを受信する
 3. Embedding Service がクエリを sparse vector 化する
 4. Retrieval Service が Elasticsearch で Top-K 検索する
-5. 取得文書をコンテキスト化して LLM Generation に送る
+5. Retrieval Service が取得文書をコンテキスト化して LLM Generation API に送る
 6. LLM Generation が回答を生成する
 7. Retrieval Service が回答と citation をフロントエンドに返却する
 
@@ -183,7 +186,10 @@ flowchart LR
 
 ```json
 {
-  "vectors": [[0.12, 0.0, 0.45], [0.09, 0.0, 0.38]]
+  "vectors": [
+    {"token_123": 1.245, "token_42": 0.556},
+    {"token_987": 0.731}
+  ]
 }
 ```
 
@@ -195,7 +201,8 @@ flowchart LR
 ```json
 {
   "query": "仕様書の更新手順は？",
-  "top_k": 5
+  "top_k": 5,
+  "score_threshold": 0.2
 }
 ```
 
@@ -210,6 +217,40 @@ flowchart LR
       "url": "https://scrapbox.io/..."
     }
   ]
+}
+```
+
+- Defaults:
+  - `top_k=5`
+  - `score_threshold=0.20`
+  - `fallback_message="該当情報が見つからないため、回答できませんでした。"`
+  - `llm_timeout_seconds=30`
+  - `llm_retry_count=2`
+  - `llm_max_tokens=512`
+
+### 7.3 LLM Generation API
+
+- Endpoint: `POST /generate`
+- Request:
+
+```json
+{
+  "query": "仕様書の更新手順は？",
+  "contexts": [
+    {
+      "content": "関連チャンク本文",
+      "title": "ページタイトル",
+      "url": "https://scrapbox.io/..."
+    }
+  ]
+}
+```
+
+- Response:
+
+```json
+{
+  "answer": "回答本文"
 }
 ```
 
@@ -242,7 +283,8 @@ flowchart LR
 ### 9.2 可観測性
 
 - Sentry で例外、タイムアウト、外部 API 失敗を収集する
-- 構造化ログでトレース可能にする
+- 構造化ログで全リクエストに `trace_id` を付与してトレース可能にする
+- MVP 必須ログ項目を `trace_id`, `service`, `operation`, `dependency`, `status_code`, `duration_ms`, `retry_count`, `error_type`, `error_message` とする
 
 ### 9.3 セキュリティ
 
@@ -252,7 +294,7 @@ flowchart LR
 
 ### 9.4 互換性
 
-- Elasticsearch と Python クライアントのバージョン整合を維持する
+- Elasticsearch 8 系列の最新安定版を採用し、Python クライアントも 8 系列の最新安定版に合わせる
 - `sparse_vector` 仕様を埋め込みモデル出力と一致させる
 
 ## 10. 運用仕様

@@ -60,7 +60,7 @@ flowchart LR
         D -->|クエリ sparse ベクトル| G
         G -->|sparse ベクトル検索| E
         E -->|関連ドキュメント| G
-        G -->|コンテキスト付きプロンプト| H
+        G -->|LLM API呼び出し| H
         H -->|生成回答| G
         G -->|回答 + 参照情報| F
     end
@@ -108,30 +108,30 @@ flowchart LR
 - フロントエンドからクエリを受け取る
 - ベクトル API によりクエリを sparse ベクトル化
 - Elasticsearch で sparse ベクトル検索（Top-K）
-- LLM 向けプロンプトを構築して生成を依頼
+- LLM 向けプロンプトを構築し、LLM コンポーネントを API 経由で呼び出して回答生成する
 
 **入出力**
 - 入力: ユーザークエリ
 - 出力: 回答本文、参照ドキュメント情報（タイトル・URL など）
 
 **設計ポイント**
-- 検索結果に対してスコア閾値を設けノイズを低減
-- 取得件数（Top-K）や再ランキング有無を設定可能にする
-- 低関連時は「該当情報不足」のフォールバック応答を返す
+- 既定値は `top_k=5`、`score_threshold=0.20` とし、必要に応じてリクエストで上書き可能にする
+- `score_threshold` 以上の文書が 1 件もない場合は、フォールバック文言「該当情報が見つからないため、回答できませんでした。」を返す
+- citation は検索順位順で返し、`url + title` キーで重複排除する
+- LLM 呼び出し既定値は `timeout=30s`、`retry=2`、`max_tokens=512` とする
 
-### 4.4 LLM コンポーネント
+### 4.4 LLM コンポーネント（Generation Service）
 
 **責務**
-- 検索結果をコンテキストとして回答生成
-- 根拠提示しやすい出力形式を維持
+- Retrieval Service から受け取ったコンテキストで回答生成する API を提供
 
 **使用モデル**
 - Ollama Gemma3
 
 **設計ポイント**
 - システムプロンプトで「与えられたコンテキスト優先」を明示
-- 回答に参照情報を含め、追跡可能性を担保
-- タイムアウト・トークン上限・失敗時再試行を設定
+- 回答は Retrieval Service 側で citation と結合して返す
+- タイムアウト・トークン上限・失敗時再試行は Retrieval Service 側の呼び出しポリシーで制御
 
 ### 4.5 フロントエンドコンポーネント
 
@@ -152,7 +152,7 @@ flowchart LR
 
 1. オペレーターがバッチ処理を手動実行
 2. データ収集コンポーネントが Cosense API から必要データを取得
-3. 取得データを前処理・チャンク化
+3. 取得データを前処理・チャンク化（既定値: `chunk_size=800` 文字、`chunk_overlap=100` 文字）
 4. ベクトル API にチャンクを送信し sparse ベクトル化
 5. 文書チャンク・メタデータ・sparse ベクトルを Elasticsearch に保存
 6. 実行ログ（成功件数/失敗件数/経過時間）を記録
@@ -164,9 +164,9 @@ flowchart LR
 3. ベクトル API でクエリを sparse ベクトル化
 4. Elasticsearch で sparse ベクトル類似検索を実行
 5. 上位の関連ドキュメントを抽出
-6. LLM コンポーネントにクエリ + 検索コンテキストを渡す
-7. LLM が回答を生成
-8. 回答と参照情報をフロントエンドに返却して表示
+6. Retrieval Service が LLM API にクエリ + 検索コンテキストを渡す
+7. LLM コンポーネントが回答を生成
+8. Retrieval Service が回答と参照情報をフロントエンドに返却して表示
 
 ---
 
@@ -192,13 +192,26 @@ flowchart LR
 
 - `POST /embed`
   - request: `{ "texts": ["..."], "type": "document|query" }`
-  - response: `{ "vectors": [[...], [...]] }`
+  - response: `{ "vectors": [{ "token_123": 1.245, "token_42": 0.556 }, { "token_987": 0.731 }] }`
 
 ### 7.2 クエリ検索 API
 
 - `POST /search`
-  - request: `{ "query": "...", "top_k": 5 }`
+  - request: `{ "query": "...", "top_k": 5, "score_threshold": 0.20 }`
   - response: `{ "answer": "...", "citations": [{ "title": "...", "url": "..." }] }`
+  - defaults:
+    - `top_k=5`
+    - `score_threshold=0.20`
+    - `fallback_message="該当情報が見つからないため、回答できませんでした。"`
+    - `llm_timeout_seconds=30`
+    - `llm_retry_count=2`
+    - `llm_max_tokens=512`
+
+### 7.3 LLM Generation API
+
+- `POST /generate`
+  - request: `{ "query": "...", "contexts": [{ "content": "...", "title": "...", "url": "..." }] }`
+  - response: `{ "answer": "..." }`
 
 ### 7.3 Elasticsearch ドキュメント例
 
@@ -223,7 +236,8 @@ flowchart LR
 
 - 可観測性:
   - Sentry で API 例外、タイムアウト、外部 API 失敗を収集
-  - 構造化ログでトレース ID を付与
+  - 構造化ログで `trace_id` を全リクエストに付与
+  - MVP 必須ログ項目: `trace_id`, `service`, `operation`, `dependency`, `status_code`, `duration_ms`, `retry_count`, `error_type`, `error_message`
 - セキュリティ:
   - Cosense API トークン、LLM 接続設定は環境変数管理
   - 通信経路は TLS を前提とする
@@ -236,7 +250,7 @@ flowchart LR
 ## 9. 注意事項（重要）
 
 - Elasticsearch と Python クライアントはバージョン互換性を必ず確認すること。
-  - 例: Elasticsearch 8.x を使用する場合、Python クライアントも 8.x 系に合わせる。
+  - 本プロジェクトは Elasticsearch 8 系列の最新安定版を採用し、Python クライアントも 8 系列の最新安定版に合わせる。
 - インデックス設定（`sparse_vector` の定義、類似度計算、インデックスオプション）は、Japanese-SPLADE の出力仕様と一致させること。
 - 将来的にモデル差し替えを行う場合、語彙表現や重み付け仕様の差異により再インデックスが必要になる可能性がある。
 
