@@ -2,7 +2,7 @@
 
 ## 1. ドキュメント目的
 
-本仕様書は、Cosense をデータソースとする RAG（Retrieval-Augmented Generation）システムの仕様を定義する。  
+本仕様書は、Cosense をデータソースとする RAG（Retrieval-Augmented Generation）システムの仕様を定義する。
 本システムは、オフラインで構築した検索インデックスを用い、オンラインで根拠付き回答を返すことを目的とする。
 
 ## 2. 適用範囲
@@ -26,10 +26,16 @@
 ### 4.1 コンポーネント
 
 1. Batch Ingestion（Python）
-2. Embedding Service（Python / Japanese-SPLADE）
-3. Retrieval Service（Python / Elasticsearch）
+2. Embedding（Python / Japanese-SPLADE）
+3. Retrieval（Python / Elasticsearch）
 4. LLM Generation（Python / Ollama Gemma3）
 5. Frontend（React + TypeScript）
+
+実装ディレクトリ（現行構成）:
+
+- `embedding/`
+- `retrieval/`
+- `llm_generation/`
 
 ### 4.2 補助基盤
 
@@ -81,7 +87,7 @@ flowchart LR
 
 - Cosense API から対象ページを取得する
 - テキスト前処理、チャンク分割、メタデータ付与を行う
-- Embedding Service で文書を sparse vector 化する
+- Embedding で文書を sparse vector 化する
 - Elasticsearch に Upsert で保存する
 
 #### 処理要件
@@ -92,7 +98,7 @@ flowchart LR
 - 更新日時ベースの差分取り込みを考慮すること
 - 失敗時は再試行と失敗ログ記録を行うこと
 
-### 5.2 Embedding Service
+### 5.2 Embedding
 
 #### 責務
 
@@ -104,7 +110,7 @@ flowchart LR
 - 文書・クエリに同一前処理を適用すること
 - バッチ推論に対応し、スループットを確保すること
 
-### 5.3 Retrieval Service
+### 5.3 Retrieval
 
 #### 責務
 
@@ -125,14 +131,14 @@ flowchart LR
 
 #### 責務
 
-- Retrieval Service から受け取った検索コンテキストを優先して回答を生成する API を提供する
+- Retrieval から受け取った検索コンテキストを優先して回答を生成する API を提供する
 
 #### 処理要件
 
 - 利用モデルは Ollama Gemma3 とする
 - プロンプトでコンテキスト優先を明示する
-- citation の整形・重複排除・返却順制御は Retrieval Service 側で行う
-- タイムアウト・トークン上限・再試行は Retrieval Service 側の呼び出しポリシーで制御する
+- citation の整形・重複排除・返却順制御は Retrieval 側で行う
+- タイムアウト・トークン上限・再試行は Retrieval 側の呼び出しポリシーで制御する
 
 ### 5.5 Frontend
 
@@ -154,19 +160,19 @@ flowchart LR
 1. オペレーターがバッチ処理を手動実行する
 2. Batch Ingestion が Cosense API からページを取得する
 3. 前処理・チャンク化を行う
-4. Embedding Service へチャンクを送信して sparse vector を取得する
+4. Embedding へチャンクを送信して sparse vector を取得する
 5. Elasticsearch に本文・メタデータ・sparse vector を保存する
 6. 成功件数/失敗件数/処理時間をログ出力する
 
 ### 6.2 オンライン質問応答フロー
 
 1. ユーザーがフロントエンドでクエリを送信する
-2. Retrieval Service がクエリを受信する
-3. Embedding Service がクエリを sparse vector 化する
-4. Retrieval Service が Elasticsearch で Top-K 検索する
-5. Retrieval Service が取得文書をコンテキスト化して LLM Generation API に送る
+2. Retrieval がクエリを受信する
+3. Embedding がクエリを sparse vector 化する
+4. Retrieval が Elasticsearch で Top-K 検索する
+5. Retrieval が取得文書をコンテキスト化して LLM Generation API に送る
 6. LLM Generation が回答を生成する
-7. Retrieval Service が回答と citation をフロントエンドに返却する
+7. Retrieval が回答と citation をフロントエンドに返却する
 
 ## 7. API 仕様（最小構成）
 

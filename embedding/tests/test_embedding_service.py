@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from services.embedding_service.app.main import app
+from embedding.app.main import app
 
 
 def test_embed_returns_sparse_vectors() -> None:

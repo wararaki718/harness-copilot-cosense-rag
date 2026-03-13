@@ -1,9 +1,22 @@
 from fastapi.testclient import TestClient
 
-from services.retrieval_service.app.main import app
+from retrieval.app import main
+
+app = main.app
 
 
-def test_search_returns_answer_and_citations() -> None:
+def test_search_returns_answer_and_citations(monkeypatch) -> None:
+    async def fake_generate_answer(
+        query: str,
+        docs: list[object],
+        trace_id: str,
+        max_tokens: int,
+    ) -> str:
+        _ = (query, docs, trace_id, max_tokens)
+        return "モック回答"
+
+    monkeypatch.setattr(main, "generate_answer", fake_generate_answer)
+
     client = TestClient(app)
     response = client.post("/search", json={"query": "仕様書の更新手順は？"})
 

@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from services.llm_generation_service.app.main import app
+from llm_generation.app.main import app
 
 
 def test_generate_returns_answer_in_mock_mode() -> None:

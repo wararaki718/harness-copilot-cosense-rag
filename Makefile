@@ -25,13 +25,13 @@ init-env:
 	@if [ ! -f .env ]; then cp .env.example .env && echo ".env created from .env.example"; else echo ".env already exists"; fi
 
 run-embedding:
-	uvicorn services.embedding_service.app.main:app --host 0.0.0.0 --port 8001
+	uvicorn embedding.app.main:app --host 0.0.0.0 --port 8001
 
 run-llm:
-	uvicorn services.llm_generation_service.app.main:app --host 0.0.0.0 --port 8002
+	uvicorn llm_generation.app.main:app --host 0.0.0.0 --port 8002
 
 run-retrieval:
-	uvicorn services.retrieval_service.app.main:app --host 0.0.0.0 --port 8000
+	uvicorn retrieval.app.main:app --host 0.0.0.0 --port 8000
 
 up:
 	docker compose up --build
@@ -51,7 +51,7 @@ health:
 	curl -s http://localhost:8000/healthz | cat
 
 check:
-	$(PYTHON) -m compileall services
+	$(PYTHON) -m compileall embedding retrieval llm_generation
 
 test:
 	$(PYTHON) -m pytest -q

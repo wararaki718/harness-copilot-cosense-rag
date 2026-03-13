@@ -18,12 +18,19 @@
 システムは以下 5 つのアプリケーションコンポーネントと、検索基盤・運用基盤で構成されます。
 
 1. データ収集コンポーネント（Batch Ingestion）
-2. ベクトル API コンポーネント（Embedding Service）
-3. クエリ検索コンポーネント（Retrieval Service）
+2. ベクトル API コンポーネント（Embedding）
+3. クエリ検索コンポーネント（Retrieval）
 4. LLM コンポーネント（Generation Service）
 5. フロントエンドコンポーネント（UI）
 
+実装ディレクトリ（現行構成）:
+
+- `embedding/`
+- `retrieval/`
+- `llm_generation/`
+
 補助基盤:
+
 - Elasticsearch（sparse vector 検索 + メタデータ格納）
 - Docker / docker-compose（ローカル・検証環境）
 - GitHub Actions（CI/CD）
@@ -87,7 +94,7 @@ flowchart LR
 - 更新日時ベースの差分取り込みを考慮
 - 失敗時はリトライと失敗ログ記録を実装
 
-### 4.2 ベクトル API コンポーネント
+### 4.2 ベクトル API コンポーネント（Embedding: `embedding/`）
 
 **責務**
 - テキストのベクトル化 API を提供
@@ -102,7 +109,7 @@ flowchart LR
 - 同一前処理を文書・クエリの双方で適用し、sparse 表現の一貫性を維持
 - スループット向上のため、バッチ推論をサポート
 
-### 4.3 クエリ検索コンポーネント
+### 4.3 クエリ検索コンポーネント（Retrieval: `retrieval/`）
 
 **責務**
 - フロントエンドからクエリを受け取る
@@ -120,18 +127,18 @@ flowchart LR
 - citation は検索順位順で返し、`url + title` キーで重複排除する
 - LLM 呼び出し既定値は `timeout=30s`、`retry=2`、`max_tokens=512` とする
 
-### 4.4 LLM コンポーネント（Generation Service）
+### 4.4 LLM コンポーネント（LLM Generation: `llm_generation/`）
 
 **責務**
-- Retrieval Service から受け取ったコンテキストで回答生成する API を提供
+- Retrieval から受け取ったコンテキストで回答生成する API を提供
 
 **使用モデル**
 - Ollama Gemma3
 
 **設計ポイント**
 - システムプロンプトで「与えられたコンテキスト優先」を明示
-- 回答は Retrieval Service 側で citation と結合して返す
-- タイムアウト・トークン上限・失敗時再試行は Retrieval Service 側の呼び出しポリシーで制御
+- 回答は Retrieval 側で citation と結合して返す
+- タイムアウト・トークン上限・失敗時再試行は Retrieval 側の呼び出しポリシーで制御
 
 ### 4.5 フロントエンドコンポーネント
 
@@ -164,9 +171,9 @@ flowchart LR
 3. ベクトル API でクエリを sparse ベクトル化
 4. Elasticsearch で sparse ベクトル類似検索を実行
 5. 上位の関連ドキュメントを抽出
-6. Retrieval Service が LLM API にクエリ + 検索コンテキストを渡す
+6. Retrieval が LLM API にクエリ + 検索コンテキストを渡す
 7. LLM コンポーネントが回答を生成
-8. Retrieval Service が回答と参照情報をフロントエンドに返却して表示
+8. Retrieval が回答と参照情報をフロントエンドに返却して表示
 
 ---
 
