@@ -1,9 +1,10 @@
 import logging
 import re
+import time
 import uuid
 from collections import Counter
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 
 from .config import settings
 from .schemas import EmbedRequest, EmbedResponse
@@ -58,7 +59,15 @@ def to_sparse_vector(text: str, max_tokens: int) -> dict[str, float]:
 @app.post("/embed", response_model=EmbedResponse)
 async def embed(payload: EmbedRequest, request: Request) -> EmbedResponse:
     trace_id: str = request.state.trace_id
+    if len(payload.texts) > settings.max_batch_size:
+        raise HTTPException(
+            status_code=422,
+            detail=f"texts must contain at most {settings.max_batch_size} items",
+        )
+
+    start = time.perf_counter()
     vectors = [to_sparse_vector(text, settings.max_tokens_per_text) for text in payload.texts]
+    duration_ms = int((time.perf_counter() - start) * 1000)
 
     logger.info(
         {
@@ -67,7 +76,7 @@ async def embed(payload: EmbedRequest, request: Request) -> EmbedResponse:
             "operation": "embed",
             "dependency": "local-model",
             "status_code": 200,
-            "duration_ms": 0,
+            "duration_ms": duration_ms,
             "retry_count": 0,
             "input_type": payload.type,
             "batch_size": len(payload.texts),

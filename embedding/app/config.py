@@ -10,6 +10,7 @@ class Settings(BaseSettings):
 
     model_name: str = "japanese-splade-mock"
     max_tokens_per_text: int = 64
+    max_batch_size: int = 64
 
 
 settings = Settings()

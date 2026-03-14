@@ -10,6 +10,11 @@ class Settings(BaseSettings):
 
     embedding_api_base_url: str = "http://localhost:8001"
     llm_generation_api_base_url: str = "http://localhost:8002"
+    elasticsearch_url: str = "http://localhost:9200"
+    elasticsearch_index: str = "cosense-rag"
+    elasticsearch_timeout_seconds: float = 5.0
+    embedding_timeout_seconds: float = 10.0
+    embedding_retry_count: int = 1
 
     default_top_k: int = 5
     default_score_threshold: float = 0.20

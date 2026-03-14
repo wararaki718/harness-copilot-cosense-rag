@@ -25,6 +25,7 @@
 
 実装ディレクトリ（現行構成）:
 
+- `batch_ingestion/`
 - `embedding/`
 - `retrieval/`
 - `llm_generation/`

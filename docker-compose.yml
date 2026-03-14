@@ -1,6 +1,17 @@
 version: "3.9"
 
 services:
+  batch-ingestion-service:
+    build:
+      context: ./batch_ingestion
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    profiles:
+      - manual
+    depends_on:
+      - embedding-service
+
   embedding-service:
     build:
       context: ./embedding

@@ -1,12 +1,14 @@
 PYTHON ?= python3
 PIP ?= pip3
 
-.PHONY: help install init-env run-embedding run-llm run-retrieval up down logs ps health check test
+.PHONY: help install init-env run-batch-ingestion run-batch-ingestion-docker run-embedding run-llm run-retrieval up down logs ps health check test
 
 help:
 	@echo "Available commands:"
 	@echo "  make install        # Install Python dependencies"
 	@echo "  make init-env       # Create .env from .env.example if missing"
+	@echo "  make run-batch-ingestion # Run Batch Ingestion once (manual trigger)"
+	@echo "  make run-batch-ingestion-docker # Run Batch Ingestion once with docker compose"
 	@echo "  make run-embedding  # Run Embedding Service locally (port 8001)"
 	@echo "  make run-llm        # Run LLM Generation Service locally (port 8002)"
 	@echo "  make run-retrieval  # Run Retrieval Service locally (port 8000)"
@@ -26,6 +28,12 @@ init-env:
 
 run-embedding:
 	uvicorn embedding.app.main:app --host 0.0.0.0 --port 8001
+
+run-batch-ingestion:
+	$(PYTHON) -m batch_ingestion.app.main
+
+run-batch-ingestion-docker:
+	docker compose run --rm --profile manual batch-ingestion-service python -m batch_ingestion.app.main
 
 run-llm:
 	uvicorn llm_generation.app.main:app --host 0.0.0.0 --port 8002
@@ -51,7 +59,7 @@ health:
 	curl -s http://localhost:8000/healthz | cat
 
 check:
-	$(PYTHON) -m compileall embedding retrieval llm_generation
+	$(PYTHON) -m compileall batch_ingestion embedding retrieval llm_generation
 
 test:
 	$(PYTHON) -m pytest -q

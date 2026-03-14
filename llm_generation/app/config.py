@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -8,7 +10,7 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8002
 
-    mode: str = "mock"
+    mode: Literal["mock", "ollama"] = "mock"
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "gemma3"
     ollama_timeout_seconds: float = 30.0

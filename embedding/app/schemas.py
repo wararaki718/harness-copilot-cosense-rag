@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class EmbedRequest(BaseModel):
-    texts: list[str] = Field(min_length=1)
+    texts: list[str] = Field(min_length=1, max_length=64)
     type: Literal["document", "query"]
 
 
