@@ -37,6 +37,7 @@
 - `embedding/`
 - `retrieval/`
 - `llm_generation/`
+- `frontend/`
 
 ### 4.2 補助基盤
 

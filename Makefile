@@ -1,7 +1,7 @@
 PYTHON ?= python3
 PIP ?= pip3
 
-.PHONY: help install init-env run-batch-ingestion run-batch-ingestion-docker run-embedding run-llm run-retrieval up down logs ps health check test
+.PHONY: help install init-env run-batch-ingestion run-batch-ingestion-docker run-embedding run-llm run-retrieval run-frontend up down logs ps health check test
 
 help:
 	@echo "Available commands:"
@@ -12,6 +12,7 @@ help:
 	@echo "  make run-embedding  # Run Embedding Service locally (port 8001)"
 	@echo "  make run-llm        # Run LLM Generation Service locally (port 8002)"
 	@echo "  make run-retrieval  # Run Retrieval Service locally (port 8000)"
+	@echo "  make run-frontend   # Run Frontend locally (port 5173)"
 	@echo "  make up             # Start all services with docker compose"
 	@echo "  make down           # Stop docker compose services"
 	@echo "  make logs           # Tail docker compose logs"
@@ -40,6 +41,10 @@ run-llm:
 
 run-retrieval:
 	uvicorn retrieval.app.main:app --host 0.0.0.0 --port 8000
+
+run-frontend:
+	npm --prefix frontend install
+	npm --prefix frontend run dev -- --host 0.0.0.0 --port 5173
 
 up:
 	docker compose up --build

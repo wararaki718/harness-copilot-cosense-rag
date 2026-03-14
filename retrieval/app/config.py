@@ -24,5 +24,7 @@ class Settings(BaseSettings):
     llm_retry_count: int = 2
     llm_max_tokens: int = 512
 
+    allowed_origins: list[str] = ["http://localhost:5173"]
+
 
 settings = Settings()

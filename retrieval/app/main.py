@@ -6,6 +6,7 @@ from typing import Any
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 
 try:
     from elasticsearch import Elasticsearch
@@ -28,6 +29,14 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Retrieval Service", version="0.1.0")
 _es_client: Any | None = None
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.middleware("http")
